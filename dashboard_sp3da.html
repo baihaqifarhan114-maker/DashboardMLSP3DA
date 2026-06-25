@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard SP3DA - Bank Indonesia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bi-navy: #0C447C;
+            --bi-gold: #BA7517;
+            --status-rawan: #A32D2D;
+            --status-waspada: #BA7517;
+            --status-aman: #1D9E75;
+            --bg-body: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding-bottom: 40px;
+        }
+
+        .header {
+            background-color: var(--bi-navy);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #93c5fd;
+            font-weight: 400;
+        }
+
+        .header-date {
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        .container {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* KPI Cards */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+            border-left: 6px solid var(--bi-navy);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card.risk { border-left-color: var(--bi-navy); }
+        .kpi-card.rawan { border-left-color: var(--status-rawan); }
+        .kpi-card.waspada { border-left-color: var(--status-waspada); }
+        .kpi-card.aman { border-left-color: var(--status-aman); }
+
+        .kpi-title {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -1px;
+        }
+        
+        .kpi-card.rawan .kpi-value { color: var(--status-rawan); }
+        .kpi-card.waspada .kpi-value { color: var(--status-waspada); }
+        .kpi-card.aman .kpi-value { color: var(--status-aman); }
+
+        /* Middle Row */
+        .middle-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+
+        /* Chart Containers */
+        .chart-container {
+            position: relative;
+            flex-grow: 1;
+            min-height: 220px;
+            width: 100%;
+        }
+
+        /* Table Section */
+        .table-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .table-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .table-header-flex .card-title {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            color: var(--text-main);
+        }
+
+        .filter-btn.active {
+            background: white;
+            color: var(--bi-navy);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn.active[data-filter="RAWAN"] { color: var(--status-rawan); }
+        .filter-btn.active[data-filter="WASPADA"] { color: var(--status-waspada); }
+        .filter-btn.active[data-filter="AMAN"] { color: var(--status-aman); }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            text-align: left;
+            padding: 14px 16px;
+            background: #f9fafb;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
+        }
+
+        th:first-child { border-top-left-radius: 8px; border-left: 1px solid var(--border-color); }
+        th:last-child { border-top-right-radius: 8px; border-right: 1px solid var(--border-color); }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+        
+        td:first-child { border-left: 1px solid transparent; }
+        td:last-child { border-right: 1px solid transparent; }
+
+        tr { transition: background-color 0.15s ease; }
+        tr:hover td { 
+            background-color: #f9fafb; 
+        }
+
+        .satker-name {
+            font-weight: 600;
+            color: var(--bi-navy);
+            font-size: 14px;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            display: inline-block;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.rawan { background: #fee2e2; color: var(--status-rawan); border: 1px solid #fecaca; }
+        .badge.waspada { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .badge.aman { background: #d1fae5; color: var(--status-aman); border: 1px solid #a7f3d0; }
+        
+        .prob-high { color: var(--status-rawan); font-weight: 700; }
+        .prob-med { color: #b45309; font-weight: 700; }
+        
+        .reason {
+            color: var(--text-muted);
+            max-width: 280px;
+            line-height: 1.5;
+        }
+        
+        .val-bold {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
+            .middle-row { grid-template-columns: 1fr; }
+            .card { min-height: 350px; }
+        }
+        @media (max-width: 768px) {
+            .kpi-row { grid-template-columns: 1fr; }
+            .header { flex-direction: column; text-align: center; gap: 12px; padding: 16px; }
+            .table-header-flex { flex-direction: column; gap: 16px; align-items: flex-start; }
+            .filters { width: 100%; justify-content: space-between; }
+            .filter-btn { flex: 1; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">
+            <h1>Sistem Prediksi Penyerapan & Peringatan Dini Anggaran (SP3DA)</h1>
+            <p>Unit KAPK - Financial Controller Departemen Keuangan</p>
+        </div>
+        <div class="header-date">
+            Posisi data: Juni 2024
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- KPI Cards -->
+        <div class="kpi-row">
+            <div class="kpi-card risk">
+                <div class="kpi-title">Total Anggaran Berisiko</div>
+                <div class="kpi-value">Rp 111,1 T</div>
+            </div>
+            <div class="kpi-card rawan">
+                <div class="kpi-title">Satker Rawan</div>
+                <div class="kpi-value">7</div>
+            </div>
+            <div class="kpi-card waspada">
+                <div class="kpi-title">Satker Waspada</div>
+                <div class="kpi-value">7</div>
+            </div>
+            <div class="kpi-card aman">
+                <div class="kpi-title">Satker Aman</div>
+                <div class="kpi-value">67</div>
+            </div>
+        </div>
+
+        <!-- Middle Row -->
+        <div class="middle-row">
+
+            <!-- Donut Chart -->
+            <div class="card">
+                <div class="card-title">Distribusi Status Satker (81 Total)</div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top 5 Bar Chart -->
+            <div class="card">
+                <div class="card-title">Top 5 Satker - Rupiah Berisiko</div>
+                <div class="chart-container">
+                    <canvas id="topRiskChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-section">
+            <div class="table-header-flex">
+                <div class="card-title" style="border:none; margin:0; padding:0; font-size: 16px;">Satker Prioritas Atensi</div>
+                <div class="filters">
+                    <button class="filter-btn active" data-filter="ALL">Semua</button>
+                    <button class="filter-btn" data-filter="RAWAN">Rawan</button>
+                    <button class="filter-btn" data-filter="WASPADA">Waspada</button>
+                    <button class="filter-btn" data-filter="AMAN">Aman</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="satkerTable">
+                    <thead>
+                        <tr>
+                            <th>Satker</th>
+                            <th>Prediksi %</th>
+                            <th>Interval</th>
+                            <th>Prob.<br><85%</th>
+                            <th>Rp Berisiko</th>
+                            <th style="text-align: center;">Status</th>
+                            <th>Alasan Utama</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Setup
+        const satkerData = [
+            { nama: "Departemen Pengelolaan Moneter", prediksi: "59%", interval: "19–99%", prob: "84%", probVal: 84, rp: "Rp 76,0 T", rpVal: 76000, status: "RAWAN", alasan: "Tahun lalu penyerapan rendah; laju belanja melambat" },
+            { nama: "Departemen Jasa Perbankan, Perizinan, dan Operasional Tresuri", prediksi: "64%", interval: "24–104%", prob: "81%", probVal: 81, rp: "Rp 22,5 T", rpVal: 22500, status: "RAWAN", alasan: "Tahun lalu penyerapan rendah" },
+            { nama: "Departemen Pengelolaan Devisa", prediksi: "82%", interval: "42–122%", prob: "61%", probVal: 61, rp: "Rp 6,0 T", rpVal: 6000, status: "WASPADA", alasan: "Tahun lalu penyerapan rendah" },
+            { nama: "Departemen Pengelolaan Logistik dan Fasilitas", prediksi: "37%", interval: "0–77%", prob: "96%", probVal: 96, rp: "Rp 4,2 T", rpVal: 4200, status: "RAWAN", alasan: "Pola sangat back-loaded; tahun lalu rendah" },
+            { nama: "Departemen Pengelolaan Uang", prediksi: "78%", interval: "38–118%", prob: "68%", probVal: 68, rp: "Rp 1,16 T", rpVal: 1160, status: "WASPADA", alasan: "Pola back-loaded; tahun lalu rendah" },
+            { nama: "Departemen Layanan Digital dan Keamanan Siber", prediksi: "78%", interval: "38–118%", prob: "68%", probVal: 68, rp: "Rp 491 M", rpVal: 491, status: "WASPADA", alasan: "Pola back-loaded; penyerapan s/d Juni rendah" },
+            { nama: "Departemen Komunikasi", prediksi: "76%", interval: "36–116%", prob: "71%", probVal: 71, rp: "Rp 259 M", rpVal: 259, status: "WASPADA", alasan: "Pola back-loaded; penyerapan s/d Juni rendah" },
+            { nama: "Departemen Pengembangan dan Inovasi Digital", prediksi: "69%", interval: "29–109%", prob: "74%", probVal: 74, rp: "Rp 127 M", rpVal: 127, status: "RAWAN", alasan: "Pola back-loaded; penyerapan s/d Juni rendah" },
+            { nama: "Departemen Penyelenggaraan Sistem Pembayaran", prediksi: "63%", interval: "23–103%", prob: "81%", probVal: 81, rp: "Rp 114 M", rpVal: 114, status: "RAWAN", alasan: "Tahun lalu penyerapan rendah" },
+            { nama: "Departemen Manajemen Risiko", prediksi: "34%", interval: "0–74%", prob: "98%", probVal: 98, rp: "Rp 44 M", rpVal: 44, status: "RAWAN", alasan: "Tahun lalu rendah; pola back-loaded" },
+            { nama: "Departemen Inovasi dan Digitalisasi Data", prediksi: "74%", interval: "34–115%", prob: "72%", probVal: 72, rp: "Rp 26 M", rpVal: 26, status: "RAWAN", alasan: "Pola back-loaded; penyerapan s/d Juni rendah" }
+        ];
+
+        // Status Colors mapping
+        const colors = {
+            RAWAN: '#A32D2D',
+            WASPADA: '#BA7517',
+            AMAN: '#1D9E75'
+        };
+
+        // Chart defaults
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#6b7280';
+
+        // Initialize Donut Chart
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Aman', 'Waspada', 'Rawan'],
+                datasets: [{
+                    data: [67, 7, 7],
+                    backgroundColor: [colors.AMAN, colors.WASPADA, colors.RAWAN],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            boxWidth: 8
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + context.label + ': ' + context.parsed + ' Satker';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize Top 5 Bar Chart
+        const top5Data = [...satkerData].sort((a,b) => b.rpVal - a.rpVal).slice(0, 5);
+        const ctxRisk = document.getElementById('topRiskChart').getContext('2d');
+        new Chart(ctxRisk, {
+            type: 'bar',
+            data: {
+                labels: top5Data.map(d => {
+                    let words = d.nama.replace('Departemen ', 'Dep. ').split(' ');
+                    if(words.length > 3) return words.slice(0,3).join(' ') + '...';
+                    return words.join(' ');
+                }),
+                datasets: [{
+                    label: 'Rupiah Berisiko',
+                    data: top5Data.map(d => d.rpVal),
+                    backgroundColor: top5Data.map(d => colors[d.status]),
+                    borderRadius: 6,
+                    barThickness: 24
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return ' ' + top5Data[context.dataIndex].rp;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        display: false,
+                        grid: { display: false }
+                    },
+                    y: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: {
+                            font: { size: 11 },
+                            color: '#4b5563'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Table Rendering
+        const tbody = document.querySelector('#satkerTable tbody');
+
+        function renderTable(filterStatus = 'ALL') {
+            tbody.innerHTML = '';
+            
+            let filteredData = satkerData;
+            if (filterStatus !== 'ALL') {
+                filteredData = satkerData.filter(d => d.status === filterStatus);
+            }
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #6b7280; padding: 40px;">Tidak ada satker dengan status ${filterStatus} dalam daftar atensi ini.</td></tr>`;
+                return;
+            }
+
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                let probClass = '';
+                if (row.probVal > 80) probClass = 'prob-high';
+                else if (row.probVal > 65) probClass = 'prob-med';
+
+                tr.innerHTML = `
+                    <td class="satker-name">${row.nama}</td>
+                    <td class="val-bold">${row.prediksi}</td>
+                    <td style="color: #6b7280; font-size: 12px;">${row.interval}</td>
+                    <td class="${probClass}">${row.prob}</td>
+                    <td class="val-bold">${row.rp}</td>
+                    <td style="text-align: center;"><span class="badge ${row.status.toLowerCase()}">${row.status}</span></td>
+                    <td class="reason">${row.alasan}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        renderTable();
+
+        // Filter Buttons logic
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const status = e.target.getAttribute('data-filter');
+                renderTable(status);
+            });
+        });
+    </script>
+</body>
+</html>
